@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(pip:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:qiita.com)",
+      "WebFetch(domain:developers.google.com)",
+      "WebFetch(domain:hattomo.github.io)",
+      "WebFetch(domain:pages.hattomo.com)",
+      "WebFetch(domain:ja-timex.github.io)",
+      "Bash(python -m pytest:*)",
+      "Bash(python main.py:*)",
+      "Bash(PYTHONUTF8=1 python:*)",
+      "Bash(ls \"C:\\\\Users\\\\sanea\\\\Downloads\\\\client_secret\"*)",
+      "Bash(ls:*)",
+      "Bash(winget list:*)",
+      "Bash(findstr:*)",
+      "Bash(start /B python:*)",
+      "Bash(timeout /T 2 /NOBREAK)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(gh auth status:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh --version:*)",
+      "Bash(gh auth login:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

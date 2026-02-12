@@ -1,0 +1,18 @@
+# Google Calendar API
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# Japanese date parsing
+ja-timex>=0.2.8
+pendulum>=3.0.0
+
+# General date parsing (fallback)
+dateparser>=1.2.0
+
+# OCR
+pytesseract>=0.3.10
+Pillow>=10.0.0
+
+# Testing
+pytest>=8.0.0

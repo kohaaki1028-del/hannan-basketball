@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>HANNANミニバス予定</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --primary: #1a73e8;
+  --primary-light: #e8f0fe;
+  --match: #d32f2f;
+  --match-light: #fce4ec;
+  --practice: #2e7d32;
+  --practice-light: #e8f5e9;
+  --reminder: #f57c00;
+  --reminder-light: #fff3e0;
+  --other: #5f6368;
+  --other-light: #f1f3f4;
+  --bg: #fafafa;
+  --card: #ffffff;
+  --text: #202124;
+  --text-sub: #5f6368;
+  --border: #e0e0e0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 16px 20px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-nav button {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-nav button:active { background: rgba(255,255,255,0.3); }
+
+.month-label {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.today-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  overflow-x: auto;
+  background: white;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-chip.active { color: white; border-color: transparent; }
+.filter-chip[data-type="all"].active { background: var(--primary); }
+.filter-chip[data-type="match"].active { background: var(--match); }
+.filter-chip[data-type="practice"].active { background: var(--practice); }
+.filter-chip[data-type="reminder"].active { background: var(--reminder); }
+.filter-chip[data-type="other"].active { background: var(--other); }
+
+/* Calendar Grid */
+.cal-grid {
+  padding: 8px 12px;
+  background: white;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-sub);
+  padding: 4px 0;
+}
+
+.cal-weekdays span:first-child { color: var(--match); }
+.cal-weekdays span:last-child { color: var(--primary); }
+
+.cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 4px;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+}
+
+.cal-day:active { background: var(--primary-light); }
+.cal-day.other-month { opacity: 0.3; }
+.cal-day.today .day-num {
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cal-day.selected { background: var(--primary-light); }
+.cal-day.sunday .day-num { color: var(--match); }
+.cal-day.saturday .day-num { color: var(--primary); }
+
+.day-dots {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.day-dot.match { background: var(--match); }
+.day-dot.practice { background: var(--practice); }
+.day-dot.reminder { background: var(--reminder); }
+.day-dot.other { background: var(--other); }
+
+/* Event List */
+.event-list {
+  padding: 8px 16px 100px;
+}
+
+.date-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-sub);
+  padding: 12px 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.event-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--other);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.event-card:active { transform: scale(0.98); }
+.event-card.match { border-left-color: var(--match); }
+.event-card.practice { border-left-color: var(--practice); }
+.event-card.reminder { border-left-color: var(--reminder); }
+
+.event-time {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 2px;
+}
+
+.event-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.event-detail {
+  display: none;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.event-card.expanded .event-detail { display: block; }
+
+.event-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.event-badge.match { background: var(--match-light); color: var(--match); }
+.event-badge.practice { background: var(--practice-light); color: var(--practice); }
+.event-badge.reminder { background: var(--reminder-light); color: var(--reminder); }
+
+/* Share links */
+.share-section {
+  padding: 16px;
+  background: white;
+  border-top: 1px solid var(--border);
+}
+
+.share-section h3 {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.share-link {
+  display: block;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: var(--primary-light);
+  border-radius: 8px;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-sub);
+}
+
+.loading .spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* No events */
+.no-events {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-sub);
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏀 HANNANミニバス予定</h1>
+  <div class="month-nav">
+    <button id="prevMonth">‹</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button id="todayBtn" class="today-btn">今日</button>
+    <button id="nextMonth">›</button>
+  </div>
+</div>
+
+<div class="filters">
+  <div class="filter-chip active" data-type="all">すべて</div>
+  <div class="filter-chip" data-type="match">試合</div>
+  <div class="filter-chip" data-type="practice">練習</div>
+  <div class="filter-chip" data-type="reminder">リマインダー</div>
+  <div class="filter-chip" data-type="other">その他</div>
+</div>
+
+<div class="cal-grid">
+  <div class="cal-weekdays">
+    <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+  </div>
+  <div class="cal-days" id="calDays"></div>
+</div>
+
+<div class="event-list" id="eventList">
+  <div class="loading">
+    <div class="spinner"></div>
+    読み込み中...
+  </div>
+</div>
+
+<div class="share-section">
+  <h3>📱 カレンダーアプリに追加</h3>
+  <a class="share-link" id="androidLink" href="#">
+    📗 Android / Googleカレンダーに追加
+  </a>
+  <a class="share-link" id="iphoneLink" href="#">
+    📘 iPhone カレンダーに追加（Googleアカウント不要）
+  </a>
+</div>
+
+<script>
+const CAL_ID = 'af0fea42115464ed5620091edcbcbfe2cf3132b79d37f5e997ed923f12fe2fe8@group.calendar.google.com';
+const API_KEY = 'AIzaSyDel2FiXD2V_1MzXSMfXsNb3mqTGobYLX8';
+
+const encodedCal = encodeURIComponent(CAL_ID);
+document.getElementById('androidLink').href = `https://calendar.google.com/calendar/r?cid=${encodedCal}`;
+document.getElementById('iphoneLink').href = `https://calendar.google.com/calendar/ical/${encodedCal}/public/basic.ics`;
+
+let currentDate = new Date();
+let selectedDate = new Date();
+let allEvents = [];
+let activeFilter = 'all';
+
+// Event type classification
+function classifyEvent(summary, description) {
+  const s = (summary || '').toLowerCase();
+  const d = (description || '').toLowerCase();
+  if (s.includes('アンケート') || s.includes('リマインダー')) return 'reminder';
+  if (s.includes('試合') || s.includes('公式戦') || s.includes('大会') || s.includes('カップ') || s.includes('トーナメント')) return 'match';
+  if (s.includes('練習')) return 'practice';
+  return 'other';
+}
+
+// Fetch events from Google Calendar API
+async function fetchEvents(year, month) {
+  const timeMin = new Date(year, month - 1, 1).toISOString();
+  const timeMax = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CAL_ID)}/events?` +
+    `key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=250`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+    return (data.items || []).map(e => ({
+      id: e.id,
+      summary: e.summary || '',
+      description: e.description || '',
+      start: e.start.dateTime || e.start.date,
+      end: e.end.dateTime || e.end.date,
+      allDay: !e.start.dateTime,
+      type: classifyEvent(e.summary, e.description),
+    }));
+  } catch (err) {
+    console.error('Fetch error:', err);
+    return [];
+  }
+}
+
+// Render month calendar grid
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const today = new Date();
+
+  document.getElementById('monthLabel').textContent =
+    `${year}年${month + 1}月`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+
+  let html = '';
+
+  // Previous month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = daysInPrev - i;
+    html += `<div class="cal-day other-month"><span class="day-num">${d}</span></div>`;
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const dateStr = formatDate(date);
+    const isToday = date.toDateString() === today.toDateString();
+    const isSelected = date.toDateString() === selectedDate.toDateString();
+    const dow = date.getDay();
+
+    const dayEvents = allEvents.filter(e => {
+      const eDate = e.start.substring(0, 10);
+      return eDate === dateStr;
+    });
+
+    const filtered = activeFilter === 'all' ? dayEvents : dayEvents.filter(e => e.type === activeFilter);
+    const types = [...new Set(filtered.map(e => e.type))];
+
+    let classes = 'cal-day';
+    if (isToday) classes += ' today';
+    if (isSelected) classes += ' selected';
+    if (dow === 0) classes += ' sunday';
+    if (dow === 6) classes += ' saturday';
+
+    const dots = types.slice(0, 3).map(t => `<div class="day-dot ${t}"></div>`).join('');
+
+    html += `<div class="${classes}" data-date="${dateStr}" onclick="selectDay('${dateStr}')">
+      <span class="day-num">${d}</span>
+      <div class="day-dots">${dots}</div>
+    </div>`;
+  }
+
+  // Next month days
+  const totalCells = firstDay + daysInMonth;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let d = 1; d <= remaining; d++) {
+    html += `<div class="cal-day other-month"><span class="day-num">${d}</span></div>`;
+  }
+
+  document.getElementById('calDays').innerHTML = html;
+}
+
+function formatDate(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+const DOW = ['日', '月', '火', '水', '木', '金', '土'];
+
+function selectDay(dateStr) {
+  selectedDate = new Date(dateStr + 'T00:00:00');
+  renderCalendar();
+  renderEvents();
+}
+
+// Render event list for selected date
+function renderEvents() {
+  const dateStr = formatDate(selectedDate);
+  const dayEvents = allEvents.filter(e => e.start.substring(0, 10) === dateStr);
+  const filtered = activeFilter === 'all' ? dayEvents : dayEvents.filter(e => e.type === activeFilter);
+
+  const dow = DOW[selectedDate.getDay()];
+  const m = selectedDate.getMonth() + 1;
+  const d = selectedDate.getDate();
+
+  let html = `<div class="date-header">${m}/${d}(${dow}) ${filtered.length === 0 ? '- 予定なし' : `- ${filtered.length}件`}</div>`;
+
+  if (filtered.length === 0) {
+    html += '<div class="no-events">この日の予定はありません</div>';
+  }
+
+  for (const evt of filtered) {
+    let timeStr = '終日';
+    if (!evt.allDay) {
+      const start = new Date(evt.start);
+      const end = new Date(evt.end);
+      const sh = String(start.getHours()).padStart(2, '0');
+      const sm = String(start.getMinutes()).padStart(2, '0');
+      const eh = String(end.getHours()).padStart(2, '0');
+      const em = String(end.getMinutes()).padStart(2, '0');
+      timeStr = `${sh}:${sm} ~ ${eh}:${em}`;
+    }
+
+    const badgeLabel = { match: '試合', practice: '練習', reminder: 'リマインダー' }[evt.type] || '';
+    const badge = badgeLabel ? `<span class="event-badge ${evt.type}">${badgeLabel}</span>` : '';
+
+    // Clean up description for display
+    let desc = evt.description
+      .replace(/━━━/g, '──')
+      .replace(/\(emoji\)/g, '')
+      .substring(0, 500);
+
+    html += `<div class="event-card ${evt.type}" onclick="this.classList.toggle('expanded')">
+      <div class="event-time">${timeStr} ${badge}</div>
+      <div class="event-title">${escapeHtml(evt.summary)}</div>
+      <div class="event-detail">${escapeHtml(desc)}</div>
+    </div>`;
+  }
+
+  document.getElementById('eventList').innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+}
+
+// Navigation
+document.getElementById('prevMonth').onclick = () => {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  loadMonth();
+};
+
+document.getElementById('nextMonth').onclick = () => {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  loadMonth();
+};
+
+document.getElementById('todayBtn').onclick = () => {
+  currentDate = new Date();
+  selectedDate = new Date();
+  loadMonth();
+};
+
+// Filters
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.type;
+    renderCalendar();
+    renderEvents();
+  };
+});
+
+async function loadMonth() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth() + 1;
+
+  document.getElementById('eventList').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  allEvents = await fetchEvents(year, month);
+  renderCalendar();
+  renderEvents();
+}
+
+// Initial load
+loadMonth();
+</script>
+</body>
+</html>

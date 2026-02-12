@@ -1,0 +1,23 @@
+# Secrets
+credentials.json
+token.json
+
+# LINE chat exports (private data)
+*.txt
+!requirements.txt
+tests/fixtures/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
