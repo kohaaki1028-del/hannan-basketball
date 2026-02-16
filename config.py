@@ -19,8 +19,10 @@ SURVEY_KEYWORDS = ['アンケート', '回答', '締切', '締め切り', '〆�
 
 # Event type keywords for title extraction
 EVENT_TYPE_KEYWORDS = {
+    '合同練習': '合同練習',
     '練習試合': '練習試合',
     '練習': '練習',
+    '公式戦': '公式戦',
     '試合': '試合',
     'ミーティング': 'ミーティング',
     '大会': '大会',

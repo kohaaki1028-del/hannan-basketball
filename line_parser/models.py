@@ -28,3 +28,4 @@ class ParsedSchedule:
     is_reminder: bool = False
     is_all_day: bool = False
     urls: list[str] = field(default_factory=list)
+    referenced_event_date: Optional[datetime] = None  # for surveys: the event date this survey references

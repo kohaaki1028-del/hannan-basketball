@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>イベント確認・承認</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #1a73e8;
+  --approve: #2e7d32;
+  --reject: #d32f2f;
+  --edit: #f57c00;
+  --auto: #00897b;
+  --bg: #f5f5f5;
+  --card: #ffffff;
+  --border: #e0e0e0;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  background: var(--bg);
+  color: #202124;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+  padding-bottom: 100px;
+}
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.header h1 { font-size: 20px; margin-bottom: 8px; }
+.header .stats { font-size: 14px; opacity: 0.9; }
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+.filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.date-group { margin-bottom: 20px; }
+.date-label {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-bottom: 2px solid var(--primary);
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.date-label .badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.badge-review { background: #fff3e0; color: var(--edit); }
+.badge-auto { background: #e0f2f1; color: var(--auto); }
+.event-card {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: all 0.2s;
+}
+.event-card.approved { border-left-color: var(--approve); background: #f1f8e9; }
+.event-card.auto_approved { border-left-color: var(--auto); background: #e0f2f1; }
+.event-card.rejected { border-left-color: var(--reject); background: #fce4ec; opacity: 0.7; }
+.event-card.edited { border-left-color: var(--edit); background: #fff8e1; }
+.event-card.needs-review { border-left-color: var(--edit); }
+.event-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.event-title { font-size: 16px; font-weight: 600; }
+.event-time { font-size: 13px; color: #5f6368; }
+.event-type {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+  margin-left: 6px;
+}
+.event-type.reminder { background: #fff3e0; color: var(--edit); }
+.event-type.event { background: #e8f5e9; color: var(--approve); }
+.event-desc {
+  font-size: 13px;
+  color: #5f6368;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: none;
+  margin: 8px 0;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+.event-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.btn:hover { transform: scale(1.02); }
+.btn-approve { background: var(--approve); color: white; }
+.btn-reject { background: #ffebee; color: var(--reject); }
+.btn-edit { background: #fff3e0; color: var(--edit); }
+.btn-primary { background: var(--primary); color: white; font-size: 16px; padding: 12px 32px; }
+.btn-approve-all { background: var(--approve); color: white; }
+.edit-area {
+  display: none;
+  margin-top: 10px;
+  padding: 10px;
+  background: #fffde7;
+  border-radius: 6px;
+}
+.edit-area.active { display: block; }
+.edit-area label { font-size: 12px; font-weight: 600; display: block; margin: 6px 0 2px; }
+.edit-area input, .edit-area textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.edit-area textarea { min-height: 200px; resize: vertical; }
+.comment-area {
+  margin-top: 8px;
+  padding: 8px;
+  background: #fff9c4;
+  border-radius: 6px;
+}
+.comment-area label {
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+  color: var(--edit);
+}
+.comment-area textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ffe082;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  min-height: 40px;
+  resize: vertical;
+}
+.comment-display {
+  font-size: 12px;
+  color: #795548;
+  background: #fff9c4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 6px;
+}
+.comment-display strong { color: var(--edit); }
+.status-label {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.status-label.approved { background: #c8e6c9; color: var(--approve); }
+.status-label.auto_approved { background: #b2dfdb; color: var(--auto); }
+.status-label.rejected { background: #ffcdd2; color: var(--reject); }
+.status-label.edited { background: #ffe0b2; color: var(--edit); }
+.status-label.pending { background: #e0e0e0; color: #616161; }
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+.bottom-inner {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bottom-stats { font-size: 13px; color: #5f6368; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>イベント確認・承認</h1>
+  <div class="stats" id="headerStats">読み込み中...</div>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all">すべて</button>
+  <button class="filter-btn" data-filter="needs-review">要確認</button>
+  <button class="filter-btn" data-filter="auto_approved">自動承認</button>
+  <button class="filter-btn" data-filter="approved">手動承認済み</button>
+  <button class="filter-btn" data-filter="rejected">削除済み</button>
+</div>
+
+<div id="eventList"></div>
+
+<div class="bottom-bar">
+  <div class="bottom-inner">
+    <div class="bottom-stats" id="bottomStats"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-approve-all" onclick="approveAllPending()">残り全て承認</button>
+      <button class="btn btn-primary" onclick="saveApproved()">保存して登録へ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let events = [];
+let editHistory = [];
+let activeFilter = 'all';
+
+const DOW = ['日','月','火','水','木','金','土'];
+const STATUS_LABELS = {
+  pending: '未確認',
+  approved: '承認',
+  auto_approved: '自動承認',
+  rejected: '却下',
+  edited: '編集済み'
+};
+
+async function loadEvents() {
+  const res = await fetch('pending_events.json');
+  events = await res.json();
+
+  // Load existing edit history if available
+  try {
+    const hres = await fetch('edit_history.json');
+    if (hres.ok) editHistory = await hres.json();
+  } catch(e) {}
+
+  render();
+}
+
+function render() {
+  const filtered = events.filter(e => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'needs-review') return e.needs_review && e.status === 'pending';
+    return e.status === activeFilter;
+  });
+
+  // Group by date
+  const groups = {};
+  for (const e of filtered) {
+    if (!groups[e.date]) groups[e.date] = [];
+    groups[e.date].push(e);
+  }
+
+  let html = '';
+  for (const date of Object.keys(groups).sort()) {
+    const dayEvents = groups[date];
+    const d = new Date(date + 'T00:00:00');
+    const dow = DOW[d.getDay()];
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const needsReview = dayEvents.some(e => e.needs_review && e.status === 'pending');
+    const allAuto = dayEvents.every(e => e.status === 'auto_approved');
+
+    html += `<div class="date-group">`;
+    html += `<div class="date-label">${m}/${day}(${dow}) - ${dayEvents.length}件`;
+    if (needsReview) {
+      html += `<span class="badge badge-review">要確認 (同日${dayEvents.length}件)</span>`;
+    } else if (allAuto) {
+      html += `<span class="badge badge-auto">自動承認</span>`;
+    }
+    html += `</div>`;
+
+    for (const e of dayEvents) {
+      const timeStr = e.is_all_day ? '終日' :
+        (e.time_start || '') + (e.time_end ? ` ~ ${e.time_end}` : '');
+      const typeStr = e.is_reminder ?
+        '<span class="event-type reminder">リマインダー</span>' :
+        '<span class="event-type event">イベント</span>';
+      const statusStr = `<span class="status-label ${e.status}">${STATUS_LABELS[e.status] || e.status}</span>`;
+
+      const isAutoApproved = e.status === 'auto_approved';
+      const hasComment = e.edit_comment && e.edit_comment.trim();
+
+      html += `
+        <div class="event-card ${e.status} ${e.needs_review && e.status==='pending' ? 'needs-review' : ''}" id="card-${e.id}">
+          <div class="event-top">
+            <div>
+              <span class="event-title">${esc(e.title)}</span> ${typeStr} ${statusStr}
+              <div class="event-time">${timeStr}</div>
+            </div>
+          </div>
+          ${e.description ? `<div class="event-desc">${esc(e.description)}</div>` : ''}
+          ${hasComment ? `<div class="comment-display"><strong>修正理由:</strong> ${esc(e.edit_comment)}</div>` : ''}`;
+
+      // Show action buttons based on status
+      if (e.status === 'pending') {
+        html += `
+          <div class="event-actions">
+            <button class="btn btn-approve" onclick="approve('${e.id}')">承認</button>
+            <button class="btn btn-edit" onclick="toggleEdit('${e.id}')">編集</button>
+            <button class="btn btn-reject" onclick="showRejectComment('${e.id}')">却下</button>
+          </div>
+          <div class="edit-area" id="edit-${e.id}">
+            <label>タイトル</label>
+            <input type="text" id="edit-title-${e.id}" value="${esc(e.title)}">
+            <label>開始時間</label>
+            <input type="text" id="edit-start-${e.id}" value="${e.time_start || ''}" placeholder="HH:MM (終日は空)">
+            <label>終了時間</label>
+            <input type="text" id="edit-end-${e.id}" value="${e.time_end || ''}" placeholder="HH:MM">
+            <label>説明</label>
+            <textarea id="edit-desc-${e.id}">${esc(e.description)}</textarea>
+            <div class="comment-area">
+              <label>修正理由コメント (必須)</label>
+              <textarea id="edit-comment-${e.id}" placeholder="なぜこの修正をしたか記入してください"></textarea>
+            </div>
+            <div style="margin-top:8px">
+              <button class="btn btn-approve" onclick="saveEdit('${e.id}')">編集を保存して承認</button>
+            </div>
+          </div>
+          <div class="comment-area" id="reject-comment-${e.id}" style="display:none;margin-top:8px;">
+            <label>却下理由コメント (必須)</label>
+            <textarea id="reject-reason-${e.id}" placeholder="なぜ却下するか記入してください"></textarea>
+            <div style="margin-top:6px">
+              <button class="btn btn-reject" onclick="confirmReject('${e.id}')">却下を確定</button>
+            </div>
+          </div>`;
+      } else if (isAutoApproved) {
+        // Auto-approved: allow editing or deleting
+        html += `
+          <div class="event-actions">
+            <button class="btn btn-edit" onclick="toggleEdit('${e.id}')" style="font-size:12px;">変更する</button>
+            <button class="btn btn-reject" onclick="showRejectComment('${e.id}')" style="font-size:12px;">削除する</button>
+          </div>
+          <div class="edit-area" id="edit-${e.id}">
+            <label>タイトル</label>
+            <input type="text" id="edit-title-${e.id}" value="${esc(e.title)}">
+            <label>開始時間</label>
+            <input type="text" id="edit-start-${e.id}" value="${e.time_start || ''}" placeholder="HH:MM (終日は空)">
+            <label>終了時間</label>
+            <input type="text" id="edit-end-${e.id}" value="${e.time_end || ''}" placeholder="HH:MM">
+            <label>説明</label>
+            <textarea id="edit-desc-${e.id}">${esc(e.description)}</textarea>
+            <div class="comment-area">
+              <label>修正理由コメント (必須)</label>
+              <textarea id="edit-comment-${e.id}" placeholder="なぜこの修正をしたか記入してください"></textarea>
+            </div>
+            <div style="margin-top:8px">
+              <button class="btn btn-approve" onclick="saveEdit('${e.id}')">編集を保存</button>
+            </div>
+          </div>
+          <div class="comment-area" id="reject-comment-${e.id}" style="display:none;margin-top:8px;">
+            <label>削除理由コメント (必須)</label>
+            <textarea id="reject-reason-${e.id}" placeholder="なぜ削除するか記入してください"></textarea>
+            <div style="margin-top:6px">
+              <button class="btn btn-reject" onclick="confirmReject('${e.id}')">削除を確定</button>
+            </div>
+          </div>`;
+      }
+
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (!html) {
+    html = '<div style="text-align:center;padding:40px;color:#999">該当するイベントはありません</div>';
+  }
+
+  document.getElementById('eventList').innerHTML = html;
+  updateStats();
+}
+
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function findEvent(id) {
+  return events.find(e => e.id === id);
+}
+
+function approve(id) {
+  const e = findEvent(id);
+  if (e) { e.status = 'approved'; render(); }
+}
+
+function showRejectComment(id) {
+  const el = document.getElementById(`reject-comment-${id}`);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function confirmReject(id) {
+  const e = findEvent(id);
+  if (!e) return;
+  const reason = document.getElementById(`reject-reason-${id}`).value.trim();
+  if (!reason) {
+    alert('却下理由を入力してください。');
+    return;
+  }
+  e.status = 'rejected';
+  e.edit_comment = reason;
+  addHistory(e, 'rejected', reason);
+  render();
+}
+
+function toggleEdit(id) {
+  const el = document.getElementById(`edit-${id}`);
+  el.classList.toggle('active');
+}
+
+function saveEdit(id) {
+  const e = findEvent(id);
+  if (!e) return;
+
+  const comment = document.getElementById(`edit-comment-${id}`).value.trim();
+  if (!comment) {
+    alert('修正理由コメントを入力してください。');
+    return;
+  }
+
+  const oldData = { title: e.title, time_start: e.time_start, time_end: e.time_end, description: e.description };
+
+  e.title = document.getElementById(`edit-title-${id}`).value;
+  e.time_start = document.getElementById(`edit-start-${id}`).value || null;
+  e.time_end = document.getElementById(`edit-end-${id}`).value || null;
+  e.description = document.getElementById(`edit-desc-${id}`).value;
+  e.is_all_day = !e.time_start;
+  e.status = 'edited';
+  e.edit_comment = comment;
+
+  addHistory(e, 'edited', comment, oldData);
+  render();
+}
+
+function addHistory(event, action, comment, oldData) {
+  editHistory.push({
+    timestamp: new Date().toISOString(),
+    event_id: event.id,
+    event_date: event.date,
+    event_title: event.title,
+    action: action,
+    comment: comment,
+    old_data: oldData || null,
+    new_data: {
+      title: event.title,
+      time_start: event.time_start,
+      time_end: event.time_end,
+      description: event.description
+    }
+  });
+}
+
+function approveAllPending() {
+  const pending = events.filter(e => e.status === 'pending');
+  if (pending.length === 0) return;
+  if (!confirm(`${pending.length}件の未確認イベントをすべて承認しますか？`)) return;
+  for (const e of pending) {
+    e.status = 'approved';
+  }
+  render();
+}
+
+function updateStats() {
+  const total = events.length;
+  const autoApproved = events.filter(e => e.status === 'auto_approved').length;
+  const approved = events.filter(e => e.status === 'approved' || e.status === 'edited').length;
+  const rejected = events.filter(e => e.status === 'rejected').length;
+  const pending = events.filter(e => e.status === 'pending').length;
+
+  document.getElementById('headerStats').textContent =
+    `全${total}件 | 自動承認: ${autoApproved} | 手動承認: ${approved} | 却下: ${rejected} | 要確認: ${pending}`;
+  document.getElementById('bottomStats').textContent =
+    `自動${autoApproved} / 承認${approved} / 却下${rejected} / 未確認${pending}`;
+}
+
+async function saveApproved() {
+  const pending = events.filter(e => e.status === 'pending');
+  if (pending.length > 0) {
+    if (!confirm(`まだ${pending.length}件の未確認イベントがあります。未確認のものは却下扱いになります。続行しますか？`)) {
+      return;
+    }
+  }
+
+  // All approved/auto_approved/edited events will be registered
+  const toRegister = events.filter(e =>
+    e.status === 'approved' || e.status === 'auto_approved' || e.status === 'edited'
+  );
+
+  // Download approved events
+  const blob1 = new Blob([JSON.stringify(toRegister, null, 2)], {type: 'application/json'});
+  const url1 = URL.createObjectURL(blob1);
+  const a1 = document.createElement('a');
+  a1.href = url1;
+  a1.download = 'approved_events.json';
+  a1.click();
+  URL.revokeObjectURL(url1);
+
+  // Download edit history
+  if (editHistory.length > 0) {
+    setTimeout(() => {
+      const blob2 = new Blob([JSON.stringify(editHistory, null, 2)], {type: 'application/json'});
+      const url2 = URL.createObjectURL(blob2);
+      const a2 = document.createElement('a');
+      a2.href = url2;
+      a2.download = 'edit_history.json';
+      a2.click();
+      URL.revokeObjectURL(url2);
+    }, 500);
+  }
+
+  const historyMsg = editHistory.length > 0
+    ? `\n\n編集履歴 (${editHistory.length}件) も保存されました。`
+    : '';
+
+  alert(`${toRegister.length}件のイベントを保存しました。${historyMsg}\n\nダウンロードされたファイルを review/ フォルダに移動して、\n以下のコマンドで登録してください:\n\npython review_events.py --register`);
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    render();
+  };
+});
+
+loadEvents();
+</script>
+</body>
+</html>

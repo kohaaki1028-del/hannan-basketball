@@ -304,6 +304,85 @@ body {
   color: var(--text-sub);
   font-size: 14px;
 }
+
+/* Edit Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  justify-content: center;
+  align-items: flex-end;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: white;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+  animation: slideUp 0.25s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal h2 {
+  font-size: 17px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text-sub);
+  padding: 4px 8px;
+}
+.modal label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+  display: block;
+  margin: 12px 0 4px;
+}
+.modal input, .modal textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.modal textarea { min-height: 150px; resize: vertical; }
+.modal-comment textarea { min-height: 50px; }
+.modal-comment {
+  background: #fff9c4;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+.modal-comment label { color: #f57c00; margin-top: 0; }
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.modal-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modal-btn-save { background: var(--primary); color: white; }
+.modal-btn-delete { background: #ffebee; color: var(--match); }
+.modal-btn-cancel { background: var(--border); color: var(--text); }
 </style>
 </head>
 <body>
@@ -311,10 +390,15 @@ body {
 <div class="header">
   <h1>🏀 HANNANミニバス予定</h1>
   <div class="month-nav">
+    <button id="prevYear">«</button>
     <button id="prevMonth">‹</button>
     <span class="month-label" id="monthLabel"></span>
-    <button id="todayBtn" class="today-btn">今日</button>
     <button id="nextMonth">›</button>
+    <button id="nextYear">»</button>
+  </div>
+  <div style="text-align:center;margin-top:6px;">
+    <button id="todayBtn" class="today-btn">今日</button>
+    <button id="eventsStartBtn" class="today-btn" style="margin-left:6px;">予定の先頭へ</button>
   </div>
 </div>
 
@@ -348,6 +432,33 @@ body {
   <a class="share-link" id="iphoneLink" href="#">
     📘 iPhone カレンダーに追加（Googleアカウント不要）
   </a>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2>
+      <span id="modalTitle">イベント編集</span>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </h2>
+    <label>タイトル</label>
+    <input type="text" id="modalEditTitle">
+    <label>開始時間</label>
+    <input type="text" id="modalEditStart" placeholder="HH:MM (終日は空)">
+    <label>終了時間</label>
+    <input type="text" id="modalEditEnd" placeholder="HH:MM">
+    <label>説明</label>
+    <textarea id="modalEditDesc"></textarea>
+    <div class="modal-comment">
+      <label>修正理由コメント (必須)</label>
+      <textarea id="modalEditComment" placeholder="なぜこの変更をしたか記入"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-btn-delete" onclick="deleteEvent()">削除</button>
+      <button class="modal-btn-save" onclick="saveModalEdit()">保存</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -512,10 +623,16 @@ function renderEvents() {
       .replace(/\(emoji\)/g, '')
       .substring(0, 500);
 
-    html += `<div class="event-card ${evt.type}" onclick="this.classList.toggle('expanded')">
+    html += `<div class="event-card ${evt.type}" onclick="toggleOrEdit(this, '${evt.id}')">
       <div class="event-time">${timeStr} ${badge}</div>
       <div class="event-title">${escapeHtml(evt.summary)}</div>
       <div class="event-detail">${escapeHtml(desc)}</div>
+      <div style="margin-top:8px;text-align:right;">
+        <button onclick="event.stopPropagation(); openEditModal('${evt.id}')"
+          style="background:var(--primary-light);color:var(--primary);border:none;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+          編集
+        </button>
+      </div>
     </div>`;
   }
 
@@ -537,9 +654,26 @@ document.getElementById('nextMonth').onclick = () => {
   loadMonth();
 };
 
+document.getElementById('prevYear').onclick = () => {
+  currentDate.setFullYear(currentDate.getFullYear() - 1);
+  loadMonth();
+};
+
+document.getElementById('nextYear').onclick = () => {
+  currentDate.setFullYear(currentDate.getFullYear() + 1);
+  loadMonth();
+};
+
 document.getElementById('todayBtn').onclick = () => {
   currentDate = new Date();
   selectedDate = new Date();
+  loadMonth();
+};
+
+document.getElementById('eventsStartBtn').onclick = () => {
+  // Jump to Feb 2025 where events start
+  currentDate = new Date(2025, 1, 1);
+  selectedDate = new Date(2025, 1, 16);
   loadMonth();
 };
 
@@ -564,6 +698,151 @@ async function loadMonth() {
   renderCalendar();
   renderEvents();
 }
+
+// --- Edit Modal ---
+let editingEventId = null;
+let editHistory = [];
+
+// Load edit history from localStorage
+try {
+  const saved = localStorage.getItem('hannan_edit_history');
+  if (saved) editHistory = JSON.parse(saved);
+} catch(e) {}
+
+function toggleOrEdit(el, id) {
+  el.classList.toggle('expanded');
+}
+
+function openEditModal(id) {
+  const evt = allEvents.find(e => e.id === id);
+  if (!evt) return;
+
+  editingEventId = id;
+  document.getElementById('modalEditTitle').value = evt.summary;
+  document.getElementById('modalEditDesc').value = evt.description;
+  document.getElementById('modalEditComment').value = '';
+
+  if (evt.allDay) {
+    document.getElementById('modalEditStart').value = '';
+    document.getElementById('modalEditEnd').value = '';
+  } else {
+    const s = new Date(evt.start);
+    const e = new Date(evt.end);
+    document.getElementById('modalEditStart').value =
+      String(s.getHours()).padStart(2,'0') + ':' + String(s.getMinutes()).padStart(2,'0');
+    document.getElementById('modalEditEnd').value =
+      String(e.getHours()).padStart(2,'0') + ':' + String(e.getMinutes()).padStart(2,'0');
+  }
+
+  document.getElementById('editModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('active');
+  editingEventId = null;
+}
+
+function saveModalEdit() {
+  const comment = document.getElementById('modalEditComment').value.trim();
+  if (!comment) {
+    alert('修正理由コメントを入力してください');
+    return;
+  }
+
+  const evt = allEvents.find(e => e.id === editingEventId);
+  if (!evt) return;
+
+  const oldData = { title: evt.summary, description: evt.description, start: evt.start, end: evt.end };
+
+  evt.summary = document.getElementById('modalEditTitle').value;
+  evt.description = document.getElementById('modalEditDesc').value;
+
+  const dateStr = formatDate(selectedDate);
+  const startTime = document.getElementById('modalEditStart').value;
+  const endTime = document.getElementById('modalEditEnd').value;
+
+  if (startTime) {
+    evt.allDay = false;
+    evt.start = dateStr + 'T' + startTime + ':00';
+    evt.end = endTime ? dateStr + 'T' + endTime + ':00' : evt.start;
+  } else {
+    evt.allDay = true;
+    evt.start = dateStr;
+    evt.end = dateStr;
+  }
+
+  evt.type = classifyEvent(evt.summary, evt.description);
+
+  // Save to edit history
+  editHistory.push({
+    timestamp: new Date().toISOString(),
+    event_id: evt.id,
+    event_date: dateStr,
+    action: 'edited',
+    comment: comment,
+    old_data: oldData,
+    new_data: { title: evt.summary, description: evt.description, start: evt.start, end: evt.end }
+  });
+  localStorage.setItem('hannan_edit_history', JSON.stringify(editHistory));
+
+  closeModal();
+  renderCalendar();
+  renderEvents();
+}
+
+function deleteEvent() {
+  const comment = document.getElementById('modalEditComment').value.trim();
+  if (!comment) {
+    alert('削除理由コメントを入力してください');
+    return;
+  }
+
+  if (!confirm('このイベントを削除しますか？')) return;
+
+  const evt = allEvents.find(e => e.id === editingEventId);
+  if (!evt) return;
+
+  const dateStr = formatDate(selectedDate);
+
+  // Save to edit history
+  editHistory.push({
+    timestamp: new Date().toISOString(),
+    event_id: evt.id,
+    event_date: dateStr,
+    action: 'deleted',
+    comment: comment,
+    old_data: { title: evt.summary, description: evt.description, start: evt.start, end: evt.end },
+    new_data: null
+  });
+  localStorage.setItem('hannan_edit_history', JSON.stringify(editHistory));
+
+  // Remove from display
+  allEvents = allEvents.filter(e => e.id !== editingEventId);
+
+  closeModal();
+  renderCalendar();
+  renderEvents();
+}
+
+// Export edit history (for learning data)
+function exportEditHistory() {
+  if (editHistory.length === 0) {
+    alert('編集履歴がありません');
+    return;
+  }
+  const blob = new Blob([JSON.stringify(editHistory, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'edit_history.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').onclick = function(e) {
+  if (e.target === this) closeModal();
+};
 
 // Initial load
 loadMonth();
